@@ -1,0 +1,4 @@
+
+response = Map();
+response.put("text","I'm too a participant of this chat :wink:");
+return response;

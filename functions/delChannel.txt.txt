@@ -1,0 +1,48 @@
+
+result = Map();
+formValues = form.get("values");
+info formValues.get("channel").get("value");
+channel_name = formValues.get("channel").get("value");
+user_data = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+ws_id = user_data.get("default_workspace");
+params = Map();
+params.put("workspace_id",ws_id);
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/channels/get"
+	type :POST
+	parameters:params
+	connection:"twist"
+];
+channel_id = "";
+for each  i in response
+{
+	if(i.get("name") == channel_name)
+	{
+		channel_id = i.get("id");
+		users = i.get("user_ids");
+		break;
+	}
+}
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/channels/remove_users"
+	type :POST
+	parameters:{"id":channel_id,"user_ids":users}
+	connection:"twist"
+];
+if(response.get("error_code").isNull())
+{
+	result.put("text","The Channel *" + channel_name + "* has been deleted successfully");
+	return result;
+}
+else
+{
+	result.put("text","Problem with deleting the channel");
+	return result;
+}

@@ -1,0 +1,24 @@
+
+// Use the below given instant button's syntax to see how the function code is invoked! 
+// [What's this?](invoke.function|dewebhook)
+token = arguments.get("input").get("token");
+end = Map();
+target_url = "https://cliq.zoho.com/api/v2/bots/twisty/incoming?zapikey=" + token + "&appkey=sbx-NDUyOC1hNTcyNDk2MS01YzdkLTQ2M2YtOTdjMi1kMTdkNGU1N2I3YWQ=";
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/hooks/unsubscribe"
+	type :POST
+	parameters:{"target_url":target_url}
+	connection:"twist"
+];
+// 	info response.get("status");
+if(response.get("status") == "ok")
+{
+	end.put("text","Webhooks services have been disabled for your account...");
+}
+else
+{
+	end.put("text","Problem with disabling webhooks services...");
+}
+info response;
+return Map();

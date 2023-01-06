@@ -1,0 +1,191 @@
+
+// --> /channel list
+// --> /channel create <channel_name>
+// --> /channel delete <channel_name>
+end = Map();
+user_data = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+ws_id = user_data.get("default_workspace");
+params = Map();
+params.put("workspace_id",ws_id);
+users_id = invokeurl
+[
+	url :"https://api.twist.com/api/v4/workspace_users/get_ids"
+	type :POST
+	parameters:{"id":ws_id}
+	connection:"twist"
+];
+args = arguments.toList(" ");
+comm = args.get(0);
+if(comm == "create")
+{
+	if(args.size() == 1)
+	{
+		end.put("text","Provide name of the channel to be created");
+		return end;
+	}
+	name = "";
+	flag = 1;
+	for each  i in args
+	{
+		if(flag == 1)
+		{
+			flag = 0;
+		}
+		else
+		{
+			if(name == "")
+			{
+				name = i;
+			}
+			else
+			{
+				name = name + " " + i;
+			}
+		}
+	}
+	// 	info "/" + name + "/";
+	params.put("name",name);
+	params.put("public",true);
+	params.put("user_ids",users_id);
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/channels/add"
+		type :POST
+		parameters:params
+		connection:"twist"
+	];
+	// 	info response;
+	if(response.get("name") == name)
+	{
+		result = Map();
+		result.put("text","The Channel *" + name + "* has been created successfully");
+		return result;
+	}
+}
+else if(comm == "list")
+{
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/channels/get"
+		type :POST
+		parameters:params
+		connection:"twist"
+	];
+	channels = "";
+	j = 1;
+	for each  i in response
+	{
+		channels = channels + j + ". " + i.get("name") + "\n";
+		j = j + 1;
+	}
+	// 	info channels;
+	result = Map();
+	result.put("text","The Channel list:\n" + channels);
+	return result;
+}
+else if(comm == "delete")
+{
+	if(args.size() == 1)
+	{
+		end.put("text","Provide name of the channel to be deleted");
+		return end;
+	}
+	name = "";
+	flag = 1;
+	for each  i in args
+	{
+		if(flag == 1)
+		{
+			flag = 0;
+		}
+		else
+		{
+			if(name == "")
+			{
+				name = i;
+			}
+			else
+			{
+				name = name + " " + i;
+			}
+		}
+	}
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/channels/get"
+		type :POST
+		parameters:params
+		connection:"twist"
+	];
+	channel_id = "";
+	for each  i in response
+	{
+		if(i.get("name") == name)
+		{
+			channel_id = i.get("id");
+			users = i.get("user_ids");
+			break;
+		}
+	}
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/channels/remove_users"
+		type :POST
+		parameters:{"id":channel_id,"user_ids":users}
+		connection:"twist"
+	];
+	result = Map();
+	if(response.get("error_code").isNull())
+	{
+		result.put("text","The Channel *" + name + "* has been deleted successfully");
+		return result;
+	}
+	else
+	{
+		result.put("text","Problem with deleting the channel");
+		return result;
+	}
+	// 	==================================================================================
+	// 	response = Map();
+	// 	user_data = invokeurl
+	// 	[
+	// 		url :"https://api.twist.com/api/v3/users/get_session_user"
+	// 		type :GET
+	// 		connection:"twist"
+	// 	];
+	// 	ws_id = user_data.get("default_workspace");
+	// 	params = Map();
+	// 	params.put("workspace_id",ws_id);
+	// 	response2 = Map();
+	// 	response2 = invokeurl
+	// 	[
+	// 		url :"https://api.twist.com/api/v3/channels/get"
+	// 		type :POST
+	// 		parameters:params
+	// 		connection:"twist"
+	// 	];
+	// 	channels = List();
+	// 	Buttons = List();
+	// 	for each  i in response2
+	// 	{
+	// 		// 	channels.add({"label":i.get("name").toString(),"value":i.get("name").toString()});
+	// 		channels.add(i.get("name"));
+	// 		Buttons.add({"label":i.get("name"),"hint":i.get("name"),"type":"+","action":{"type":"invoke.function","data":{"name":"delChannel"}}});
+	// 	}
+	// 	info Buttons;
+	// 	response = Map();
+	// 	//
+	// 	response.put("text","Select a Channel listed below to delete it from your Twist workspace");
+	// 	response.put("buttons",Buttons);
+	// 	return response;
+}
+else
+{
+	end.put("text","Enter a valid *" + "/channel" + "* command...\nSay \" *help* \" to know about slash commands");
+}
+return end;

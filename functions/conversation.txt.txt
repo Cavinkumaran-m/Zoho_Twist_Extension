@@ -1,0 +1,480 @@
+
+header = Map();
+footer = Map();
+// No of days in month
+myDate = today;
+nbDaysInMonth = (eomonth(myDate,0).addDay(1) - toStartOfMonth(myDate)) / (1000 * 60 * 60 * 24);
+nbDaysInYear = today.getDayOfYear();
+// No of days in year
+year = myDate.getYear();
+startDate = "1-Jan-" + year;
+endDate = "31-Dec-" + year;
+numberOfDays = days360(startDate,endDate);
+// To get the session user
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+// Get the details through id
+params = Map();
+myList = list();
+try 
+{
+	myList = target.get("id").toList(" ");
+	// OPTION
+	option = myList.get(1);
+	// END OPTION
+	info myList;
+	if(myList.get(5) != "null")
+	{
+		if(option == "conversation_msg")
+		{
+			top_title = myList.get(5);
+		}
+		else
+		{
+			top_title = replaceall(myList.get(5),"&"," ");
+		}
+		header.put("title",top_title);
+	}
+}
+catch (e)
+{
+	info e;
+}
+info myList;
+id = myList.get(0);
+start_index = myList.get(2);
+page_no = myList.get(3).toNumber();
+info option;
+// To change the page number
+page_option = myList.get(4);
+try 
+{
+	if(page_option == "null")
+	{
+		page_no = page_no + 0;
+	}
+	else if(page_option == "next")
+	{
+		info "next";
+		page_no = page_no + 1;
+	}
+	else if(page_option == "previous")
+	{
+		page_no = page_no - 1;
+	}
+}
+catch (e)
+{
+	page_no = page_no + 0;
+}
+// To choose the domain
+if(option == "main")
+{
+	mp_params = Map();
+	mp_params.put("workspace_id",id);
+	url2 = "https://api.twist.com/api/v3/channels/get";
+	params = mp_params;
+	tablist = {{"label":"Channels","id":"channels"},{"label":"Group","id":"group"}};
+	unread_url = "https://api.twist.com/api/v3/threads/get_unread";
+	com = "channel_id";
+}
+else if(option == "group")
+{
+	gp_params = Map();
+	gp_params.put("workspace_id",id);
+	url2 = "https://api.twist.com/api/v3/conversations/get";
+	params = gp_params;
+	tablist = {{"label":"Channels","id":"channels"},{"label":"Group","id":"group"}};
+	unread_url = "https://api.twist.com/api/v3/conversations/get_unread";
+	com = "conversation_id";
+	params11 = Map();
+	params11.put("id",id);
+}
+else if(option == "conversation_msg")
+{
+	ccp_params = Map();
+	ccp_params.put("conversation_id",id);
+	ccp_params.put("order_by","asc");
+	ccp_params.put("limit","500");
+	url2 = "https://api.twist.com/api/v3/conversation_messages/get";
+	params = ccp_params;
+	tablist = {{"label":"Conversation","id":"conversation_msg"}};
+}
+else if(option == "thread_msg")
+{
+	t_params = Map();
+	t_params.put("thread_id",id);
+	t_params.put("order_by","asc");
+	t_params.put("limit","500");
+	url2 = "https://api.twist.com/api/v3/comments/get";
+	params = t_params;
+	tablist = {{"label":"Thread","id":"thread_msg"}};
+}
+else if(option == "thread")
+{
+	op_params = Map();
+	op_params.put("channel_id",id);
+	url2 = "https://api.twist.com/api/v3/threads/get";
+	params = op_params;
+	tablist = {{"label":"Thread","id":"thread"}};
+	unread_url = "https://api.twist.com/api/v3/threads/get_unread";
+	un_params = Map();
+	un_params.put("workspace_id",response.get("default_workspace"));
+	com = "thread_id";
+}
+// To declare the message as read
+if(option == "conversation_msg" || option == "thread_msg")
+{
+	try 
+	{
+		r_params = Map();
+		r_params.put("id",id);
+		if(option == "conversation_msg")
+		{
+			one_conversation = invokeurl
+			[
+				url :"https://api.twist.com/api/v3/conversations/getone"
+				type :GET
+				parameters:r_params
+				connection:"twist"
+			];
+			r_params.put("obj_index",one_conversation.get("last_obj_index"));
+			urls = "https://api.twist.com/api/v3/conversations/mark_read";
+		}
+		else
+		{
+			one_thread = invokeurl
+			[
+				url :"https://api.twist.com/api/v3/threads/getone"
+				type :GET
+				parameters:r_params
+				connection:"twist"
+			];
+			r_params.put("obj_index",one_thread.get("last_obj_index"));
+			urls = "https://api.twist.com/api/v3/threads/mark_read";
+		}
+		read = invokeurl
+		[
+			url :urls
+			type :POST
+			parameters:r_params
+			connection:"twist"
+		];
+		info read;
+	}
+	catch (e)
+	{
+		info e;
+	}
+}
+// 	To get the unread message
+if(option == "main" || option == "group" || option == "thread")
+{
+	if(option == "thread")
+	{
+		params = un_params;
+	}
+	unread = invokeurl
+	[
+		url :unread_url
+		type :GET
+		parameters:params
+		connection:"twist"
+	];
+	info unread;
+	unique = list();
+	unique_obj = list();
+	for each  un in unread
+	{
+		ch_id = un.get(com);
+		if(!unique.contains(ch_id))
+		{
+			unique.add(ch_id);
+			unique_obj.add(un.get("obj_index"));
+		}
+	}
+}
+// To get the message from the twist app
+if(option == "thread")
+{
+	params = op_params;
+}
+all_message = invokeurl
+[
+	url :url2
+	type :GET
+	parameters:params
+	connection:"twist"
+];
+info all_message;
+if(all_message.size() > 0)
+{
+	i = 0;
+	sections = list();
+	lst_index = 0;
+	for each  msg in all_message
+	{
+		if(all_message.indexOf(msg) >= start_index && i < 10)
+		{
+			elements = list();
+			// 	To get the created unixtime
+			if(option == "main" || option == "group")
+			{
+				un_time = msg.get("created_ts");
+			}
+			else if(option == "conversation_msg" || option == "thread_msg")
+			{
+				un_time = msg.get("posted_ts");
+			}
+			else if(option == "thread")
+			{
+				un_time = msg.get("last_updated_ts");
+			}
+			info un_time;
+			// 	GET TIME
+			unixTime1 = un_time;
+			currentDate = zoho.currenttime.toString();
+			indiaTime = currentDate.unixEpoch();
+			unixTime2 = indiaTime / 1000;
+			div = ((unixTime2 - unixTime1) / 3600).floor();
+			time = 0;
+			if(div == 0)
+			{
+				store = ((unixTime2 - unixTime1) / 60).floor();
+				if(store == 0)
+				{
+					time = (unixTime2 - unixTime1) + "sec";
+				}
+				else
+				{
+					time = store + "min";
+				}
+			}
+			else if(div > 0 && div <= 24)
+			{
+				time = div + "h";
+			}
+			else if(div > 24 && div <= nbDaysInMonth * 24)
+			{
+				time = (div / 24).floor() + "d";
+			}
+			else if(div > nbDaysInMonth * 24 && div <= numberOfDays * 24)
+			{
+				time = (div / (nbDaysInMonth * 24)).floor() + "m";
+			}
+			else
+			{
+				time = (div / (numberOfDays * 24)).floor() + "y";
+			}
+			// 		List the channels
+			if(option == "main")
+			{
+				info msg;
+				if(unique.contains(msg.get("id")))
+				{
+					elements.add({"type":"title","text":msg.get("name") + " :Target:","buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " " + "thread" + " " + "0 " + page_no.toString() + " null " + myList.get(5)}}});
+				}
+				else
+				{
+					elements.add({"type":"title","text":msg.get("name"),"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " " + "thread" + " " + "0 " + page_no.toString() + " null " + myList.get(5)}}});
+				}
+				elements.add({"type":"divider"});
+				sections.add({"id":msg.get("id"),"elements":elements});
+			}
+			// 		List the group
+			else if(option == "group")
+			{
+				info msg;
+				if(msg.get("title") == null)
+				{
+					size = msg.get("user_ids").size();
+					for each  ids in msg.get("user_ids")
+					{
+						if(ids != response.get("id"))
+						{
+							params11.put("user_id",ids);
+							get_user = invokeurl
+							[
+								url :"https://api.twist.com/api/v4/workspace_users/getone"
+								type :GET
+								parameters:params11
+								connection:"twist"
+							];
+						}
+					}
+					if(size == 2)
+					{
+						tit = get_user.get("name");
+						if(unique.contains(msg.get("id")))
+						{
+							u_index = unique.indexOf(msg.get("id"));
+							get_obj = unique_obj.get(u_index);
+							tit = tit + " :Target:";
+						}
+						elements.add({"type":"title","text":tit,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " thread_msg" + " 0 " + page_no.toString() + " null " + myList.get(5)}}});
+					}
+					else
+					{
+						temp_size = size - 1;
+						title_txt = get_user.get("name") + "&" + temp_size + "others";
+						tit = title_txt;
+						if(unique.contains(msg.get("id")))
+						{
+							u_index = unique.indexOf(msg.get("id"));
+							get_obj = unique_obj.get(u_index);
+							tit = tit + " :Target:";
+						}
+						elements.add({"type":"title","text":tit,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " thread_msg" + " 0 " + page_no.toString() + " null " + myList.get(5)}}});
+					}
+				}
+				else
+				{
+					tit = msg.get("title");
+					if(unique.contains(msg.get("id")))
+					{
+						u_index = unique.indexOf(msg.get("id"));
+						get_obj = unique_obj.get(u_index);
+						tit = tit + " :Target:";
+					}
+					elements.add({"type":"title","text":tit,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " conversation_msg" + " 0 " + page_no.toString() + " null " + myList.get(5)}}});
+				}
+				elements.add({"type":"divider"});
+				sections.add({"id":msg.get("id"),"elements":elements});
+			}
+			// 				To display conversation message and thread message
+			else if(option == "conversation_msg" || option == "thread_msg")
+			{
+				if(msg.get("creator") == response.get("id"))
+				{
+					elements.add({"type":"text","text":"Me  " + time});
+				}
+				else
+				{
+					elements.add({"type":"text","text":msg.get("creator_name") + "  " + time});
+				}
+				// 				To check the attachements
+				try 
+				{
+					if(msg.get("attachments").size() != 0)
+					{
+						attachment = msg.get("attachments");
+						for each  attach in attachment
+						{
+							elements.add({"type":"subtext","text":attach.get("file_name")});
+							elements.add({"type":"buttons","buttons":{{"label":"View","type":"open.url","url":attach.get("url")}}});
+						}
+					}
+					else
+					{
+						elements.add({"type":"subtext","text":msg.get("content")});
+					}
+				}
+				catch (e)
+				{
+					info e;
+				}
+				elements.add({"type":"divider"});
+				sections.add({"id":msg.get("obj_index"),"elements":elements});
+			}
+			//			List of thread
+			else if(option == "thread")
+			{
+				info "thread_section";
+				top_title = replaceall(msg.get("title")," ","&");
+				if(unique.contains(msg.get("id")))
+				{
+					u_index = unique.indexOf(msg.get("id"));
+					g_obj = unique_obj.get(u_index);
+					info msg.get("title") + " " + u_index + " " + g_obj + " " + msg.get("id");
+					elements.add({"type":"title","text":msg.get("title") + " :Target:" + "  " + time,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " thread_msg " + "0 " + "1" + " null " + top_title}}});
+				}
+				else
+				{
+					elements.add({"type":"title","text":msg.get("title") + "  " + time,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":msg.get("id") + " thread_msg " + "0 " + "1" + " null " + top_title}}});
+				}
+				response1 = invokeurl
+				[
+					url :"https://api.twist.com/api/v4/workspace_users/get"
+					type :GET
+					parameters:{"id":response.get("default_workspace")}
+					connection:"twist"
+				];
+				for each  resp in response1
+				{
+					if(resp.get("id") == msg.get("snippet_creator"))
+					{
+						if(msg.get("snippet").size() > 5)
+						{
+							mlist = list();
+							mlist = msg.get("snippet").toList(" ");
+							text = "";
+							i = 0;
+							for each  ml in mlist
+							{
+								if(i <= 4)
+								{
+									text = text + " " + ml;
+								}
+							}
+						}
+						else
+						{
+							text = resp.get("name");
+						}
+						elements.add({"type":"subtext","text":text + ":" + msg.get("snippet")});
+					}
+				}
+				elements.add({"type":"divider"});
+				sections.add({"id":msg.get("id"),"elements":elements});
+			}
+			i = i + 1;
+			lst_msg = msg;
+		}
+	}
+	nxt_index = all_message.indexOf(lst_msg) + 1;
+	btn = list();
+	check = 0;
+	check2 = 0;
+	footer.put({"text":"Page " + page_no});
+	//			Next and Previous page 	
+	pre_start = start_index.toNumber() - 10;
+	info pre_start;
+	if(pre_start >= 0)
+	{
+		previous_button = {"label":"Previous page","type":"invoke.function","name":"conversation","id":id + " " + option + " " + pre_start.toString() + " " + page_no.toString() + " " + "previous " + myList.get(5)};
+		btn.add(previous_button);
+		check2 = 1;
+	}
+	if(all_message.size() - nxt_index > 0)
+	{
+		next_button = {"label":"Next page","type":"invoke.function","name":"conversation","id":id + " " + option + " " + nxt_index + " " + page_no.toString() + " " + "next " + myList.get(5)};
+		btn.add(next_button);
+		check = 1;
+	}
+	if(check == 1 || check2 == 1)
+	{
+		footer.put("buttons",btn);
+	}
+	// 	info nxt_index;
+	return {"type":"applet","tabs":tablist,"active_tab":option,"sections":sections,"footer":footer,"header":header};
+}
+else
+{
+	empty_element = list();
+	empty_section = list();
+	if(option == "thread")
+	{
+		temp_txt = "No thread  created";
+	}
+	else
+	{
+		temp_txt = "No message posted";
+	}
+	empty_element.add({"type":"text","text":temp_txt});
+	empty_section.add({"id":1,"elements":empty_element});
+	return {"type":"applet","tabs":{{"label":option,"id":option}},"active_tab":"thread","sections":empty_section};
+}

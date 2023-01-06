@@ -1,0 +1,232 @@
+
+footer = Map();
+id = "channels";
+if(target.containKey("id"))
+{
+	id = target.get("id");
+	info id;
+}
+channels = Map();
+zero = 0;
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+wk_id = response.get("default_workspace");
+params = Map();
+params.put("workspace_id",wk_id);
+params11 = Map();
+params11.put("id",wk_id);
+// tab view
+notification = invokeurl
+[
+	url :"https://api.twist.com/api/v3/notifications_settings/get"
+	type :GET
+	parameters:params
+	connection:"twist"
+];
+unique = list();
+unique_obj = list();
+try 
+{
+	// To get the unread threads
+	url = "";
+	param = "";
+	com = "";
+	if(id == "channels")
+	{
+		url = "https://api.twist.com/api/v3/threads/get_unread";
+		com = "channel_id";
+	}
+	else if(id == "group")
+	{
+		url = "https://api.twist.com/api/v3/conversations/get_unread";
+		com = "conversation_id";
+	}
+	unread = invokeurl
+	[
+		url :url
+		type :GET
+		parameters:params
+		connection:"twist"
+	];
+	info unread;
+	for each  un in unread
+	{
+		ch_id = un.get(com);
+		if(!unique.contains(ch_id))
+		{
+			unique.add(ch_id);
+			unique_obj.add(un.get("obj_index"));
+		}
+	}
+}
+catch (e)
+{
+	info e;
+}
+// To get the unique elements
+tablist = {{"label":"Channels","id":"channels"},{"label":"Group","id":"group"}};
+if(id == "channels")
+{
+	channels = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/channels/get"
+		type :GET
+		parameters:params
+		connection:"twist"
+	];
+	if(channels.size() > 0)
+	{
+		channels_section = list();
+		info channels.size();
+		i = 0;
+		lst_id = 0;
+		for each  channel in channels
+		{
+			if(i < 10)
+			{
+				channel_elements = list();
+				if(unique.contains(channel.get("id")))
+				{
+					channel_elements.add({"type":"title","text":channel.get("name") + " :Target:","buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":channel.get("id") + " " + "thread" + " " + "0" + " 1" + " " + " null " + channel.get("name")}}});
+				}
+				else
+				{
+					channel_elements.add({"type":"title","text":channel.get("name"),"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":channel.get("id") + " " + "thread" + " " + "0" + " 1" + " " + " null " + channel.get("name")}}});
+				}
+				channel_elements.add({"type":"divider"});
+				channels_section.add({"id":channel.get("id"),"elements":channel_elements});
+				i = i + 1;
+				lst_id = channel;
+			}
+		}
+		btn = list();
+		if(channels.size() > 10)
+		{
+			info "btn";
+			// 			To get the start index
+			index = channels.indexOf(lst_id);
+			nxt_index = index + 1;
+			nxt_id = channels.get(nxt_index).get("id");
+			footer.put({"text":"Page 1"});
+			next_button = {"label":"Next page","type":"invoke.function","name":"conversation","id":wk_id + " " + "main" + " " + nxt_index + " 1" + " next" + " null"};
+			btn.add(next_button);
+			footer.put("buttons",btn);
+		}
+		return {"type":"applet","tabs":tablist,"active_tab":"channels","sections":channels_section,"footer":footer};
+	}
+	else
+	{
+		empty_element = list();
+		empty_section = list();
+		empty_element.add({"type":"text","text":"No Channels Created"});
+		empty_section.add({"id":1,"elements":empty_element});
+		return {"type":"applet","tabs":{{"label":"Channels","id":"channels"}},"active_tab":"thread","sections":empty_section};
+	}
+}
+else if(id == "group")
+{
+	conversation = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/conversations/get"
+		type :GET
+		parameters:params
+		connection:"twist"
+	];
+	if(conversation.size() > 0)
+	{
+		conversation_section = list();
+		i = 0;
+		for each  con in conversation
+		{
+			if(i < 10)
+			{
+				conversation_elements = list();
+				if(con.get("title") == null)
+				{
+					size = con.get("user_ids").size();
+					for each  ids in con.get("user_ids")
+					{
+						if(ids != response.get("id"))
+						{
+							params11.put("user_id",ids);
+							get_user = invokeurl
+							[
+								url :"https://api.twist.com/api/v4/workspace_users/getone"
+								type :GET
+								parameters:params11
+								connection:"twist"
+							];
+						}
+					}
+					if(size == 2)
+					{
+						tit = get_user.get("name");
+						if(unique.contains(con.get("id")))
+						{
+							u_index = unique.indexOf(con.get("id"));
+							get_obj = unique_obj.get(u_index);
+							tit = tit + " :Target:";
+						}
+						conversation_elements.add({"type":"title","text":tit,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":con.get("id") + " conversation_msg " + "0" + " 1 " + "null " + tit}}});
+					}
+					else
+					{
+						temp_size = size - 1;
+						title_txt = get_user.get("name") + "&" + temp_size + "others";
+						tit = title_txt;
+						if(unique.contains(con.get("id")))
+						{
+							u_index = unique.indexOf(con.get("id"));
+							get_obj = unique_obj.get(u_index);
+							tit = tit + " :Target:";
+						}
+						conversation_elements.add({"type":"title","text":tit,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":con.get("id") + " conversation_msg " + "0" + " 1 " + "null " + tit}}});
+					}
+				}
+				else
+				{
+					tit = con.get("title");
+					if(unique.contains(con.get("id")))
+					{
+						u_index = unique.indexOf(con.get("id"));
+						get_obj = unique_obj.get(u_index);
+						tit = tit + " :Target:";
+					}
+					conversation_elements.add({"type":"title","text":tit,"buttons":{{"label":"View","type":"invoke.function","name":"conversation","id":con.get("id") + " conversation_msg " + "0" + " 1 " + "null " + tit}}});
+				}
+				conversation_elements.add({"type":"divider"});
+				conversation_section.add({"id":con.get("id"),"elements":conversation_elements});
+				i = i + 1;
+				lst_id = con;
+			}
+		}
+		btn = list();
+		if(conversation.size() > 10)
+		{
+			info "btn";
+			// 			To get the start index
+			index = conversation.indexOf(lst_id);
+			nxt_index = index + 1;
+			nxt_id = conversation.get(nxt_index).get("id");
+			footer.put({"text":"Page 1"});
+			info nxt_index;
+			next_button = {"label":"Next page","type":"invoke.function","name":"conversation","id":wk_id + " " + "group" + " " + nxt_index + " 1" + " next " + "null"};
+			btn.add(next_button);
+			footer.put("buttons",btn);
+		}
+		return {"type":"applet","tabs":tablist,"active_tab":"messages","sections":conversation_section,"footer":footer};
+	}
+	else
+	{
+		empty_element = list();
+		empty_section = list();
+		empty_element.add({"type":"text","text":"No Group created"});
+		empty_section.add({"id":1,"elements":empty_element});
+		return {"type":"applet","tabs":{{"label":"Group","id":"group"}},"active_tab":"thread","sections":empty_section};
+	}
+}
+return Map();

@@ -1,0 +1,89 @@
+
+// --> /webhooks start 
+// --> /webhooks stop
+token = null;
+args = arguments.toList(" ");
+info args;
+if(args.size() != 2)
+{
+	result = Map();
+	result.put("text","No webhook token has been given");
+	return result;
+}
+else
+{
+	token = args.get(1);
+}
+target_url = "https://cliq.zoho.com/api/v2/bots/twisty/incoming?zapikey=" + token + "&appkey=sbx-NDUyOC1hNTcyNDk2MS01YzdkLTQ2M2YtOTdjMi1kMTdkNGU1N2I3YWQ=";
+// target_url = "https://eo8ap8e72ziqg4j.m.pipedream.net";
+info target_url;
+end = Map();
+if(args.get(0) == "start")
+{
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/hooks/subscribe"
+		type :POST
+		parameters:{"target_url":target_url,"event":"comment_added"}
+		connection:"twist"
+	];
+	info response;
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/hooks/subscribe"
+		type :POST
+		parameters:{"target_url":target_url,"event":"channel_added"}
+		connection:"twist"
+	];
+	info response;
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/hooks/subscribe"
+		type :POST
+		parameters:{"target_url":target_url,"event":"thread_added"}
+		connection:"twist"
+	];
+	info response;
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/hooks/subscribe"
+		type :POST
+		parameters:{"target_url":target_url,"event":"message_added"}
+		connection:"twist"
+	];
+	info response;
+	if(response.get("status") == "ok")
+	{
+		end.put("text","Webhooks services have been enabled for your account...");
+	}
+	else
+	{
+		end.put("text","Problem with enabling webhooks services...");
+	}
+	info response;
+}
+else if(args.get(0) == "stop")
+{
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/hooks/unsubscribe"
+		type :POST
+		parameters:{"target_url":target_url}
+		connection:"twist"
+	];
+	// 	info response.get("status");
+	if(response.get("status") == "ok")
+	{
+		end.put("text","Webhooks services have been disabled for your account...");
+	}
+	else
+	{
+		end.put("text","Problem with disabling webhooks services...");
+	}
+	info response;
+}
+else
+{
+	end.put("text","Invalid webhook command...");
+}
+return end;

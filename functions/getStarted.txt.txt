@@ -1,0 +1,66 @@
+
+// Use the below given instant button's syntax to see how the function code is invoked! 
+// [What's this?](invoke.function|getstarted)
+response = Map();
+// response.put("text","Isn't the instant button super fantabulous? 😲\nFunctions work with buttons. There are two types of buttons - Message Card Buttons and Instant Buttons.");
+// info arguments;
+// zoho.cliq.postToBot("twisty",arguments);
+token = arguments.get("input").get("token");
+info token;
+target_url = "https://cliq.zoho.com/api/v2/applications/4528/incoming?appkey=NDUyOC1hNTcyNDk2MS01YzdkLTQ2M2YtOTdjMi1kMTdkNGU1N2I3YWQ=&zapikey=" + token;
+// target_url = 'https://cutt.ly/2Ncpy0l';
+info target_url;
+zoho.cliq.postToBot("twisty",target_url);
+params = Map();
+params.put("target_url",target_url);
+params.put("event","comment_added");
+zoho.cliq.postToBot("twisty",params.get("target_url"));
+params1 = Map();
+params1.put("target_url",target_url);
+params1.put("event","channel_added");
+params2 = Map();
+params2.put("target_url",target_url);
+params2.put("event","thread_added");
+params3 = Map();
+params3.put("target_url",target_url);
+params3.put("event","message_added");
+responses = List();
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/hooks/subscribe"
+	type :POST
+	parameters:params
+	connection:"twist"
+];
+info response;
+responses.add(response);
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/hooks/subscribe"
+	type :POST
+	parameters:params1
+	connection:"twist"
+];
+info response;
+responses.add(response);
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/hooks/subscribe"
+	type :POST
+	parameters:params2
+	connection:"twist"
+];
+info response;
+responses.add(response);
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/hooks/subscribe"
+	type :POST
+	parameters:params3
+	connection:"twist"
+];
+info response;
+responses.add(response);
+zoho.cliq.postToBot("twisty",responses.toString());
+end = Map();
+return end;

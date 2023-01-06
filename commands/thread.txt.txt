@@ -1,0 +1,208 @@
+
+// --> /thread create <channel_name> <thread_name>
+// --> /thread delete <channel_name> <thread_name>
+// --> /thread list <channel_name>
+// --> /thread saved
+end = Map();
+user_data = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+ws_id = user_data.get("default_workspace");
+channels = invokeurl
+[
+	url :"https://api.twist.com/api/v3/channels/get"
+	type :POST
+	parameters:{"workspace_id":ws_id}
+	connection:"twist"
+];
+args = arguments.toList(" ");
+comm = args.get(0);
+if(comm == "create")
+{
+	if(args.size() < 3)
+	{
+		end.put("text","Provide the required fields properly...\nTo know more say \" *help* \"");
+		return end;
+	}
+	channel_name = args.get(1);
+	chanel_id = "";
+	for each  i in channels
+	{
+		if(i.get("name") == channel_name)
+		{
+			channel_id = i.get("id");
+			break;
+		}
+	}
+	if(channel_id.isNull())
+	{
+		end.put("text","No such channel exists");
+		return end;
+	}
+	thread_name = "" + args.get(2);
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/threads/add"
+		type :POST
+		parameters:{"channel_id":channel_id,"recipients":"EVERYONE","title":thread_name}
+		connection:"twist"
+	];
+	// 		info response;
+	if(response.get("title") == thread_name)
+	{
+		result = Map();
+		result.put("text","The Thread *" + thread_name + "* has been created successfully within \"" + channel_name + "\" channel");
+		return result;
+	}
+}
+else if(comm = "delete")
+{
+	if(args.size() < 3)
+	{
+		end.put("text","Provide the required fields properly...\nTo know more say \" *help* \"");
+		return end;
+	}
+	name = args.get(1);
+	for each  i in channels
+	{
+		if(i.get("name") == name)
+		{
+			channel_id = i.get("id");
+			break;
+		}
+	}
+	if(channel_id == null)
+	{
+		result = Map();
+		result.put("text","No such Channel exists");
+		return result;
+	}
+	thread_name = "" + args.get(2);
+	threads = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/threads/get"
+		type :POST
+		parameters:{"channel_id":channel_id}
+		connection:"twist"
+	];
+	for each  i in threads
+	{
+		if(i.get("title") == thread_name)
+		{
+			thread_id = i.get("id");
+			break;
+		}
+	}
+	if(thread_id == null)
+	{
+		result = Map();
+		result.put("text","No such thread exists");
+		return result;
+	}
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/threads/remove"
+		type :POST
+		parameters:{"id":thread_id}
+		connection:"twist"
+	];
+	// 	info response;
+	if(response.get("status") == "ok")
+	{
+		result = Map();
+		result.put("text","The thread *" + thread_name + "* has been deleted successfully");
+		return result;
+	}
+}
+else if(comm = "list")
+{
+	try 
+	{
+		name = args.get(1);
+	}
+	catch (e)
+	{
+		result = Map();
+		result.put("text","Provide the required fields properly...\nTo know more say \" *help* \"");
+		return result;
+	}
+	channel_id = null;
+	for each  i in channels
+	{
+		// 		info i;
+		if(i.get("name") == name)
+		{
+			channel_id = i.get("id");
+			break;
+		}
+	}
+	if(channel_id == null)
+	{
+		result = Map();
+		result.put("text","No such Channel exists");
+		return result;
+	}
+	threads = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/threads/get"
+		type :POST
+		parameters:{"channel_id":channel_id}
+		connection:"twist"
+	];
+	thread_list = "";
+	j = 1;
+	for each  i in threads
+	{
+		thread_list = thread_list + j + ". " + i.get("title") + "\n";
+		j = j + 1;
+	}
+	if(thread_list = "")
+	{
+		thread_list = "None";
+	}
+	result = Map();
+	result.put("text","Threads in " + args.get(1) + " Channel:\n" + thread_list);
+	return result;
+}
+else if(comm = "saved")
+{
+	thread_list = "";
+	j = 1;
+	for each  channel in channels
+	{
+		channel_id = channel.get("id");
+		threads = invokeurl
+		[
+			url :"https://api.twist.com/api/v3/threads/get"
+			type :POST
+			parameters:{"channel_id":channel_id,"is_starred":true}
+			connection:"twist"
+		];
+		// 		info threads;
+		for each  i in threads
+		{
+			if(i.get("starred") == true)
+			{
+				thread_list = thread_list + j + ". " + i.get("title") + "\n";
+				j = j + 1;
+			}
+		}
+	}
+	if(thread_list = "")
+	{
+		thread_list = "None";
+	}
+	result = Map();
+	result.put("text","Saved threads:\n" + thread_list);
+	return result;
+}
+else
+{
+	result = Map();
+	result.put("text","Enter a valid *" + "/thread" + "* command...\nSay \" *help* \" to know about slash commands");
+	return result;
+}
+return end;

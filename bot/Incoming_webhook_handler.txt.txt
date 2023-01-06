@@ -1,0 +1,83 @@
+
+// Configure the bot's incoming webhook URL in any third-party service to trigger this handler.
+result = Map();
+info body;
+// result.put("text",body);
+// return result;
+//thread created
+try 
+{
+	if(!body.get("title").isNull())
+	{
+		thread_id = body.get("id");
+		thread_name = body.get("title");
+		creator = body.get("creator_name");
+		result.put("text","Thread *" + thread_name + "* has been created by " + creator);
+	}
+	//thread commented
+	else if(!body.get("content").isNull() && body.get("title").isNull() && body.get("conversation_id").isNull())
+	{
+		creator = body.get("creator_name");
+		thread_id = body.get("thread_id");
+		thread = invokeurl
+		[
+			url :"https://api.twist.com/api/v3/threads/getone"
+			type :POST
+			parameters:{"id":thread_id}
+			connection:"twist"
+		];
+		title = thread.get("title");
+		content = body.get("content");
+		result.put("text","(Thread *" + title + "* )\n" + creator + " commented *" + content + "* ");
+	}
+	//thread closed
+	else if(!body.get("system_message").isNull())
+	{
+		thread_id = body.get("thread_id");
+		destroyer = body.get("system_message").get("initiator_name");
+		thread = invokeurl
+		[
+			url :"https://api.twist.com/api/v3/threads/getone"
+			type :POST
+			parameters:{"id":thread_id}
+			connection:"twist"
+		];
+		title = thread.get("title");
+		result.put("text","Thread *" + title + "* has been closed by " + destroyer);
+	}
+	//channel created
+	else if(!body.get("name").isNull())
+	{
+		creator = body.get("creator_name");
+		title = body.get("name");
+		result.put("text","Channel *" + title + "* has been created by " + creator);
+	}
+	//messages
+	else if(!body.get("conversation_id").isNull())
+	{
+		creator = body.get("creator_name");
+		content = body.get("content");
+		result.put("text","User *" + creator + "* has messaged:\n" + content);
+	}
+	else
+	{
+		result.put("text",body);
+	}
+}
+catch (e)
+{
+	result.put("text",e);
+}
+// text = body.get("content");
+// text = text.toString();
+// end = Map();
+// end.put("text",body);
+return Map();
+// threads = invokeurl
+// 	[
+// 		url :"https://api.twist.com/api/v3/threads/get"
+// 		type :POST
+// 		parameters:{"channel_id":channel_id}
+// 		connection:"twist"
+// 	];
+// return Map();

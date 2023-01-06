@@ -1,0 +1,48 @@
+
+response = Map();
+user_data = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+ws_id = user_data.get("default_workspace");
+params = Map();
+params.put("workspace_id",ws_id);
+response = Map();
+response = invokeurl
+[
+	url :"https://api.twist.com/api/v3/channels/get"
+	type :POST
+	parameters:params
+	connection:"twist"
+];
+// info response;
+if(response.size() < 3)
+{
+	result = Map();
+	result.put("text","Probblem with getting Channels info... Please try again later");
+	return result;
+}
+channels = List();
+j = 0;
+temp = Map();
+options = List();
+for each  i in response
+{
+	if(j < response.size() - 2)
+	{
+		temp = Map();
+		temp.put("label",i.get("name"));
+		temp.put("value",i.get("name"));
+		options.add(temp);
+		j = j + 1;
+	}
+}
+inputs = List();
+test = Map();
+temp = Map();
+inputs.add({"type":"select","name":"channel","label":"Channels","trigger_on_change":true,"hint":"Choose a channel to delete","placeholder":"Choose a Channel","mandatory":true,"value":"channel","options":options});
+form = {"type":"form","title":"Delete Channel","hint":"Select a channel to delete from your Twist workspace","name":"deletechannel","version":1,"button_label":"Delete","action":{"type":"invoke.function","name":"delChannel"},"inputs":inputs};
+return form;
+// return Map();

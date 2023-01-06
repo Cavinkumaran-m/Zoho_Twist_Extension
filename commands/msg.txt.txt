@@ -1,0 +1,227 @@
+
+// --> /msg user ASHOKMITHRA <msg>
+// --> /msg thread <channel_name> <thread_name> <message>
+// --> /msg search <query>
+// --> /msg lu
+end = Map();
+args = arguments.toList(" ");
+comm = args.get(0);
+user_data = invokeurl
+[
+	url :"https://api.twist.com/api/v3/users/get_session_user"
+	type :GET
+	connection:"twist"
+];
+// info user_data;
+ws_id = user_data.get("default_workspace");
+if(comm == "user")
+{
+	if(args.size() < 3)
+	{
+		end.put("text","Provide the required fields properly...\nTo know more say \" *help* \"");
+		return end;
+	}
+	dest = args.get(1);
+	content = "";
+	j = 0;
+	for each  i in args
+	{
+		if(j < 2)
+		{
+			j = j + 1;
+			continue;
+		}
+		content = content + " " + args.get(j);
+		j = j + 1;
+	}
+	conversations = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/conversations/get"
+		type :POST
+		parameters:{"workspace_id":ws_id}
+		connection:"twist"
+	];
+	users = invokeurl
+	[
+		url :"https://api.twist.com/api/v4/workspace_users/get"
+		type :POST
+		parameters:{"id":ws_id}
+		connection:"twist"
+	];
+	user_id = null;
+	for each  i in users
+	{
+		if(dest == i.get("first_name"))
+		{
+			user_id = i.get("id");
+			break;
+		}
+	}
+	if(user_id == null)
+	{
+		end.put("text","No such user...Use *" + "/msg lu" + "* command to get user's name list");
+		return end;
+	}
+	for each  i in conversations
+	{
+		if(i.get("user_ids").size() == 2)
+		{
+			if(i.get("user_ids").get(0) == user_id || i.get("user_ids").get(1) == user_id)
+			{
+				conversation_id = i.get("id");
+				break;
+			}
+		}
+	}
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/conversation_messages/add"
+		type :POST
+		parameters:{"conversation_id":conversation_id,"content":content}
+		connection:"twist"
+	];
+	if(response.get("creator_name"))
+	{
+		end.put("text","Message Sent Successfully");
+		return end;
+	}
+}
+else if(comm == "thread")
+{
+	if(args.size() < 4)
+	{
+		end.put("text","Provide the required fields properly...\nTo know more say \" *help* \"");
+		return end;
+	}
+	content = "";
+	j = 0;
+	for each  i in args
+	{
+		if(j < 3)
+		{
+			j = j + 1;
+			continue;
+		}
+		content = content + " " + args.get(j);
+		j = j + 1;
+	}
+	channel_name = args.get(1);
+	channels = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/channels/get"
+		type :POST
+		parameters:{"workspace_id":ws_id}
+		connection:"twist"
+	];
+	channel_id = null;
+	for each  i in channels
+	{
+		if(i.get("name") == channel_name)
+		{
+			channel_id = i.get("id");
+			break;
+		}
+	}
+	if(channel_id == null)
+	{
+		end.put("text","No such Channel...Use *" + "/channel list" + "* command to get Channel's list");
+		return end;
+	}
+	thread_name = "" + args.get(2);
+	threads = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/threads/get"
+		type :POST
+		parameters:{"channel_id":channel_id}
+		connection:"twist"
+	];
+	thread_id = null;
+	for each  i in threads
+	{
+		if(i.get("title") == thread_name)
+		{
+			thread_id = i.get("id");
+			break;
+		}
+	}
+	if(thread_id == null)
+	{
+		end.put("text","No such Thread...Use *" + "/thread list" + "* command to get thread's list");
+		return end;
+	}
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/comments/add"
+		type :POST
+		parameters:{"thread_id":thread_id,"recipients":"EVERYONE","content":content}
+		connection:"twist"
+	];
+	if(response.get("content"))
+	{
+		end.put("text","Comment Sent Successfully");
+		return end;
+	}
+}
+else if(comm == "search")
+{
+	if(args.size() < 2)
+	{
+		end.put("text","Provide the required fields properly...\nTo know more say \" *help* \"");
+		return end;
+	}
+	j = 1;
+	query = args.get(1);
+	end = Map();
+	result = "";
+	response = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/search"
+		type :POST
+		parameters:{"workspace_id":ws_id,"query":query}
+		connection:"twist"
+	];
+	for each  i in response.get("items")
+	{
+		result = result + "\n" + j + ". *" + "(" + i.get("type") + ": " + i.get("title") + ")" + "* \n" + i.get("snippet");
+		j = j + 1;
+	}
+	if(result == "")
+	{
+		end.put("text","No Search Results for given query");
+	}
+	else
+	{
+		end.put("text","Search Results:\n" + result);
+	}
+	return end;
+}
+else if(comm = "lu")
+{
+	user_data = invokeurl
+	[
+		url :"https://api.twist.com/api/v3/users/get_session_user"
+		type :GET
+		connection:"twist"
+	];
+	ws_id = user_data.get("default_workspace");
+	users = invokeurl
+	[
+		url :"https://api.twist.com/api/v4/workspace_users/get"
+		type :POST
+		parameters:{"id":ws_id}
+		connection:"twist"
+	];
+	names = "";
+	j = 1;
+	for each  i in users
+	{
+		names = names + "\n" + j + "." + i.get("first_name");
+		j = j + 1;
+	}
+	end.put("text","List of users:\n" + names);
+}
+else
+{
+	end.put("text","Enter a valid *" + "/msg" + "* command...\nSay \" *help* \" to know about slash commands");
+}
+return end;

@@ -1,0 +1,47 @@
+
+response = Map();
+if(message.containsIgnoreCase("HI") || message.containsIgnoreCase("HEY"))
+{
+	text = "Hi! Twisty at your service..\nHow you doin'? :wink:";
+	response.put("suggestions",{"list":{{"text":"Rocking!"},{"text":"Just Surviving!"}}});
+}
+else if(message.equals("Rocking!"))
+{
+	text = "Glad to hear! Keep Rocking... :smile:";
+}
+else if(message.equals("Just Surviving!"))
+{
+	text = "Oops! Don't you worry. Your day is definitely going to get better.  Type \"Help\" to know what to do... :grinning:";
+}
+else if(message.containsIgnoreCase("help"))
+{
+	text = "This extension provides the following three basic slash commands to manage your *Twist Workspace*:";
+	// 	response.put("suggestions",{"list":{{"text":"Webhooks"},{"text":"Channels"},{"text":"Threads"},{"text":"Message"}}});
+	response.put("suggestions",{"list":{{"text":"Channels"},{"text":"Threads"},{"text":"Message"}}});
+}
+// else if(message.equals("Webhooks"))
+// {
+// 	response = {"text":"Webhook commands","card":{"theme":"modern-inline"},"slides":{{"type":"label","data":{{"/webhooks start":"Enables webhooks services so that every new notifications in Twist are notified through Twisty bot.."},{"/webhooks stop":"Disables the webhook services if you don't want to be distracted by those notifications"}}}}};
+// 	return response;
+// }
+else if(message.equals("Channels"))
+{
+	response = {"text":"Channel Commands","card":{"theme":"modern-inline"},"slides":{{"type":"label","data":{{"/channel list":"Lists all the channels in your Twist workspace"},{"/channel create <channel_name>":"Creates a new channel"},{"/channel delete <channel_name>":"Deletes the specified channel"}}}}};
+	return response;
+}
+else if(message.equals("Threads"))
+{
+	response = {"text":"Thread Commands","card":{"theme":"modern-inline"},"slides":{{"type":"label","data":{{"/thread list <channel_name>":"Lists all the threads in the specified channel"},{"/thread saved":"Lists all the saved threads"},{"/thread create <channel_name> <thread_name>":"Creates a new thread under the specified channel"},{"/thread delete <channel_name> <thread_name>":"Deletes the specified thread"}}}}};
+	return response;
+}
+else if(message.equals("Message"))
+{
+	response = {"text":"Message Commands","card":{"theme":"modern-inline"},"slides":{{"type":"label","data":{{"/msg search <query>":"Returns all the messages matching the specified search query"},{"/msg user <user_name> <message>":"Send a direct message to the specified user"},{"/msg thread <channel_name> <thread_name> <message>":"Send message to the specified thread"},{"/msg lu":"Displays the names of the users in your workspace"}}}}};
+	return response;
+}
+else
+{
+	text = "Sorry Couldn't get you :anxious: \nSay \" *help* \" to know more about our Twist extension :grinning:";
+}
+response.put("text",text);
+return response;
